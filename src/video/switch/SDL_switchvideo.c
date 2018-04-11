@@ -28,6 +28,9 @@
 #include "../../events/SDL_keyboard_c.h"
 #include "../../events/SDL_windowevents_c.h"
 #include "SDL_switchtouch.h"
+#if SDL_VIDEO_DRIVER_SWITCH_GL
+#include "SDL_switchgl.h"
+#endif
 
 #include <switch.h>
 
@@ -69,6 +72,9 @@ static void SWITCH_DeleteDevice(SDL_VideoDevice *device)
 static SDL_VideoDevice *SWITCH_CreateDevice(int devindex)
 {
     SDL_VideoDevice *device;
+#if SDL_VIDEO_DRIVER_SWITCH_GL
+    SDL_GLDriverData *data;
+#endif
 
     device = (SDL_VideoDevice *) SDL_calloc(1, sizeof(SDL_VideoDevice));
     if (!device) {
@@ -85,6 +91,26 @@ static SDL_VideoDevice *SWITCH_CreateDevice(int devindex)
     device->DestroyWindowFramebuffer = SWITCH_DestroyWindowFramebuffer;
 
     device->free = SWITCH_DeleteDevice;
+
+#if SDL_VIDEO_DRIVER_SWITCH_GL
+    data = (SDL_GLDriverData *) SDL_calloc(1, sizeof(SDL_GLDriverData));
+    if (data == NULL) {
+        SDL_OutOfMemory();
+        SDL_free(device);
+        return NULL;
+    }
+    device->gl_data = data;
+
+    device->GL_LoadLibrary = SWITCH_GL_LoadLibrary;
+    device->GL_GetProcAddress = SWITCH_GL_GetProcAddress;
+    device->GL_UnloadLibrary = SWITCH_GL_UnloadLibrary;
+    device->GL_CreateContext = SWITCH_GL_CreateContext;
+    device->GL_MakeCurrent = SWITCH_GL_MakeCurrent;
+    device->GL_SetSwapInterval = SWITCH_GL_SetSwapInterval;
+    device->GL_GetSwapInterval = SWITCH_GL_GetSwapInterval;
+    device->GL_SwapWindow = SWITCH_GL_SwapWindow;
+    device->GL_DeleteContext = SWITCH_GL_DeleteContext;
+#endif
 
     return device;
 }
@@ -126,6 +152,12 @@ static int SWITCH_VideoInit(_THIS)
 
 static void SWITCH_VideoQuit(_THIS)
 {
+#if SDL_VIDEO_DRIVER_SWITCH_GL
+    if (_this->gl_data != NULL) {
+        SDL_free(_this->gl_data);
+    }
+#endif
+
     SWITCH_QuitTouch();
     gfxExit();
 }
