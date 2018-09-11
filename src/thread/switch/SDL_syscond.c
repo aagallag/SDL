@@ -129,7 +129,7 @@ SDL_CondWaitTimeout(SDL_cond * cond, SDL_mutex * mutex, Uint32 ms)
     mutex->mutex.thread_tag = 0;
     mutex->mutex.counter = 0;
 
-    retval = condvarWaitTimeout(&cond->var, &mutex->mutex.lock, ms * 1000000);
+    retval = condvarWaitTimeout(&cond->cond, &mutex->mutex.lock, ms * 1000000);
 
     mutex->mutex.thread_tag = mutex_state[0];
     mutex->mutex.counter = mutex_state[1];
@@ -141,22 +141,23 @@ SDL_CondWaitTimeout(SDL_cond * cond, SDL_mutex * mutex, Uint32 ms)
 int
 SDL_CondWait(SDL_cond * cond, SDL_mutex * mutex)
 {
-   int retval;
+    int retval;
 
     if (!cond) {
         SDL_SetError("Passed a NULL condition variable");
         return -1;
     }
 
-    condvarInit(&cond->cond, &mutex->mutex);
-  
-    /* Unlock the mutex, as is required by condition variable semantics */
-    SDL_UnlockMutex(mutex);
+    // backup mutext state
+    mutex_state[0] = mutex->mutex.thread_tag;
+    mutex_state[1] = mutex->mutex.counter;
+    mutex->mutex.thread_tag = 0;
+    mutex->mutex.counter = 0;
 
-    retval =  condvarWait(&cond->cond);
+    retval =  condvarWait(&cond->cond, &mutex->mutex.lock);
 
-    /* Lock the mutex, as is required by condition variable semantics */
-    SDL_LockMutex(mutex);
+    mutex->mutex.thread_tag = mutex_state[0];
+    mutex->mutex.counter = mutex_state[1];
 
     return retval;
 }
