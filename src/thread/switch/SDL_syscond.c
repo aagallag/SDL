@@ -142,6 +142,7 @@ int
 SDL_CondWait(SDL_cond * cond, SDL_mutex * mutex)
 {
     int retval;
+    uint32_t mutex_state[2];
 
     if (!cond) {
         SDL_SetError("Passed a NULL condition variable");
